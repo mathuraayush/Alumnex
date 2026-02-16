@@ -21,8 +21,8 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-const protect = require("./middleware/auth.middleware");
-const authorizeRoles = require("./middleware/role.middleware");
+const protect = require("./middlewares/auth.middleware");
+const authorizeRoles = require("./middlewares/role.middleware");
 
 app.get("/api/test", protect, authorizeRoles("tpo"), (req, res) => {
   res.json({ message: "TPO access granted" });
