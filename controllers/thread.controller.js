@@ -1,7 +1,9 @@
 const Thread = require("../models/Thread.model");
 const Company = require("../models/Company.model");
 const JobRole = require("../models/JobRole.model");
-
+const slugify = require("../utils/slugify");
+const csv = require("csv-parser");
+const { Readable } = require("stream");
 // Create Thread
 exports.createThread = async (req, res) => {
   try {
@@ -216,3 +218,97 @@ exports.getYearStats = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+// Bulk Upload
+
+
+
+exports.bulkUploadThreads = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "CSV file required" });
+    }
+
+    const rows = [];
+    const errors = [];
+    let inserted = 0;
+
+    const stream = Readable.from(req.file.buffer);
+
+    stream
+      .pipe(csv())
+      .on("data", (row) => rows.push(row))
+      .on("end", async () => {
+        for (let row of rows) {
+          try {
+            // 🔹 Map friendly headers
+            const companyName = row["Company Name"];
+            const roleTitle = row["Role Offered"];
+            const year = Number(row["Placement Year"]);
+            const difficulty = row["Difficulty Level"];
+            const rounds = row["Interview Rounds"]?.split("|") || [];
+            const topics = row["Key Topics Covered"]?.split("|") || [];
+            const experience = row["Interview Experience"];
+            const candidateName = row["Your Name"] || "";
+            const linkedin = row["LinkedIn Profile"] || "";
+
+            if (!companyName || !roleTitle || !year || !difficulty || !experience) {
+              errors.push({ row, error: "Missing required fields" });
+              continue;
+            }
+
+            // 🔹 Auto-create Company
+            const slug = slugify(companyName);
+
+            let company = await Company.findOne({ slug });
+
+            if (!company) {
+              company = await Company.create({
+                name: companyName,
+                slug,
+              });
+            }
+
+            // 🔹 Auto-create JobRole
+            let jobRole = await JobRole.findOne({
+              title: roleTitle,
+              company: company._id,
+            });
+
+            if (!jobRole) {
+              jobRole = await JobRole.create({
+                title: roleTitle,
+                company: company._id,
+              });
+            }
+
+            // 🔹 Create Thread
+            await Thread.create({
+              company: company._id,
+              jobRole: jobRole._id,
+              yearOfPlacement: year,
+              difficulty,
+              rounds,
+              topicsCovered: topics,
+              experience,
+              candidateName,
+              linkedin,
+            });
+
+            inserted++;
+          } catch (err) {
+            errors.push({ row, error: "Insertion failed" });
+          }
+        }
+
+        res.status(200).json({
+          totalRows: rows.length,
+          inserted,
+          failed: errors.length,
+          errors,
+        });
+      });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
