@@ -19,7 +19,7 @@ connectDB();
 const app = express();
 
 const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(",")
+  ? process.env.CORS_ORIGIN.split(",").map((o) => o.trim().replace(/\/+$/g, ""))
   : [];
 
 app.use(
@@ -28,7 +28,9 @@ app.use(
       // allow requests with no origin (Postman, curl, mobile apps)
       if (!origin) return callback(null, true);
 
-      if (allowedOrigins.includes(origin)) {
+      const normalizedOrigin = origin.trim().replace(/\/+$/g, "");
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
         return callback(null, true);
       } else {
         return callback(new Error("Not allowed by CORS"));
