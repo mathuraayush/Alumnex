@@ -117,9 +117,14 @@ exports.getThreads = async (req, res) => {
       filter.difficulty = difficulty;
     }
 
-    // Text search (experience field)
+    // Global text search across multiple fields
     if (search) {
-      filter.experience = { $regex: search, $options: "i" };
+      filter.$or = [
+        { experience: { $regex: search, $options: "i" } },
+        { candidateName: { $regex: search, $options: "i" } },
+        { linkedin: { $regex: search, $options: "i" } },
+        { rounds: { $regex: search, $options: "i" } },
+      ];
     }
 
     const skip = (page - 1) * limit;
