@@ -16,33 +16,26 @@ exports.createThread = async (req, res) => {
       topicsCovered,
       experience,
       candidateName,
-      linkedin
+      linkedin,
     } = req.body;
 
-    // =============================
-    // 1️⃣ FIND OR CREATE COMPANY
-    // =============================
-
+    // Auto-create or find Company
     let company = await Company.findOne({ slug: companySlug });
-
+    
     if (!company) {
-      if (!companyName) {
-                const slug = slugify(companyName, { lower: true, strict: true });
-
+      // Reconstruct company name from slug
+      const companyName = companySlug
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+      
       company = await Company.create({
         name: companyName,
-        slug,
-        description: "",
+        slug: companySlug,
       });
-      }
-
-
     }
 
-    // =============================
-    // 2️⃣ FIND OR CREATE JOB ROLE
-    // =============================
-
+    // Auto-create or find Job Role
     let jobRole = await JobRole.findOne({
       title: roleTitle,
       company: company._id,
@@ -54,10 +47,6 @@ exports.createThread = async (req, res) => {
         company: company._id,
       });
     }
-
-    // =============================
-    // 3️⃣ CREATE THREAD
-    // =============================
 
     const thread = await Thread.create({
       company: company._id,
@@ -72,14 +61,7 @@ exports.createThread = async (req, res) => {
     });
 
     res.status(201).json(thread);
-
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({
-        message: "Duplicate entry detected",
-      });
-    }
-
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -117,13 +99,16 @@ exports.getThreads = async (req, res) => {
       filter.difficulty = difficulty;
     }
 
-    // Global text search across multiple fields
+    // Global text search across all thread fields
     if (search) {
       filter.$or = [
         { experience: { $regex: search, $options: "i" } },
         { candidateName: { $regex: search, $options: "i" } },
         { linkedin: { $regex: search, $options: "i" } },
         { rounds: { $regex: search, $options: "i" } },
+        { topicsCovered: { $regex: search, $options: "i" } },
+        { company: { $regex: search, $options: "i" } },
+        { jobRole: { $regex: search, $options: "i" } }
       ];
     }
 
