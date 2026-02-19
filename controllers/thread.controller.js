@@ -16,22 +16,48 @@ exports.createThread = async (req, res) => {
       topicsCovered,
       experience,
       candidateName,
-      linkedin,
+      linkedin
     } = req.body;
 
-    const company = await Company.findOne({ slug: companySlug });
+    // =============================
+    // 1️⃣ FIND OR CREATE COMPANY
+    // =============================
+
+    let company = await Company.findOne({ slug: companySlug });
+
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      if (!companyName) {
+                const slug = slugify(companyName, { lower: true, strict: true });
+
+      company = await Company.create({
+        name: companyName,
+        slug,
+        description: "",
+      });
+      }
+
+
     }
 
-    const jobRole = await JobRole.findOne({
+    // =============================
+    // 2️⃣ FIND OR CREATE JOB ROLE
+    // =============================
+
+    let jobRole = await JobRole.findOne({
       title: roleTitle,
       company: company._id,
     });
 
     if (!jobRole) {
-      return res.status(404).json({ message: "Job role not found" });
+      jobRole = await JobRole.create({
+        title: roleTitle,
+        company: company._id,
+      });
     }
+
+    // =============================
+    // 3️⃣ CREATE THREAD
+    // =============================
 
     const thread = await Thread.create({
       company: company._id,
@@ -46,7 +72,14 @@ exports.createThread = async (req, res) => {
     });
 
     res.status(201).json(thread);
+
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: "Duplicate entry detected",
+      });
+    }
+
     res.status(500).json({ message: "Server error" });
   }
 };
