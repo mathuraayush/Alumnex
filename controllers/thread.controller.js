@@ -99,19 +99,17 @@ exports.getThreads = async (req, res) => {
       filter.difficulty = difficulty;
     }
 
+
     // Global text search across all thread fields
     if (search) {
       filter.$or = [
         { experience: { $regex: search, $options: "i" } },
         { candidateName: { $regex: search, $options: "i" } },
         { linkedin: { $regex: search, $options: "i" } },
-        { rounds: { $regex: search, $options: "i" } },
-        { topicsCovered: { $regex: search, $options: "i" } },
-        { company: { $regex: search, $options: "i" } },
-        { jobRole: { $regex: search, $options: "i" } }
+        { rounds: { $elemMatch: { $regex: search, $options: "i" } } },
+        { topicsCovered: { $elemMatch: { $regex: search, $options: "i" } } },
       ];
     }
-
     const skip = (page - 1) * limit;
 
     const threads = await Thread.find(filter)
