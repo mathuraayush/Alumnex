@@ -94,9 +94,9 @@ exports.getThreads = async (req, res) => {
       filter.yearOfPlacement = Number(year);
     }
 
-    // Difficulty filter
+    // Difficulty filter (case-insensitive match to support query values like 'easy' or 'EASY')
     if (difficulty) {
-      filter.difficulty = difficulty;
+      filter.difficulty = { $regex: `^${difficulty}$`, $options: "i" };
     }
 
 
