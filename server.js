@@ -32,6 +32,13 @@ app.use(
 
 
 app.use(express.json());
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  })
+});
 app.use("/api/companies", companyRoutes);
 app.use("/api/jobroles", jobRoleRoutes);
 app.use("/api/threads", threadRoutes);
