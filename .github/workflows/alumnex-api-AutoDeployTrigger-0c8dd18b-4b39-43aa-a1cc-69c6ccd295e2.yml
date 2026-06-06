@@ -1,0 +1,49 @@
+name: Trigger auto deployment for alumnex-api
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ main ]
+    paths:
+    - '**'
+    - '.github/workflows/alumnex-api-AutoDeployTrigger-0c8dd18b-4b39-43aa-a1cc-69c6ccd295e2.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ALUMNEXAPI_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.ALUMNEXAPI_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.ALUMNEXAPI_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}
+          _dockerfilePathKey_: _dockerfilePath_
+          _targetLabelKey_: _targetLabel_
+          registryUrl: alumnexacr15.azurecr.io
+          registryUsername: ${{ secrets.ALUMNEXAPI_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.ALUMNEXAPI_REGISTRY_PASSWORD }}
+          containerAppName: alumnex-api
+          resourceGroup: alumnex-rg
+          imageToBuild: alumnexacr15.azurecr.io/alumnex-api:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
